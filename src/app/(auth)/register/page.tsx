@@ -1,0 +1,237 @@
+/* ============================================================
+   Meridian — Register Page
+   Sign-up with email/password, onboarding condition selection
+   ============================================================ */
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { COMMON_CONDITIONS } from "@/lib/utils/constants";
+
+export default function RegisterPage() {
+    const router = useRouter();
+    const [step, setStep] = useState<"credentials" | "conditions">("credentials");
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    function toggleCondition(condition: string) {
+        setSelectedConditions((prev: string[]) =>
+            prev.includes(condition)
+                ? prev.filter((c: string) => c !== condition)
+                : [...prev, condition]
+        );
+    }
+
+    async function handleCredentialSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setError("");
+
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters");
+            return;
+        }
+        setStep("conditions");
+    }
+
+    async function handleFinalSubmit() {
+        setLoading(true);
+        setError("");
+
+        try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                    conditions: selectedConditions,
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Registration failed");
+            }
+
+            router.push("/dashboard");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <div className="min-h-dvh bg-gradient-mesh flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-md">
+                {/* Logo */}
+                <div className="flex items-center justify-center gap-2.5 mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md">
+                        <div className="w-3 h-3 rounded-full bg-white" />
+                    </div>
+                    <span className="text-2xl font-bold text-neutral-800 tracking-tight">
+                        Meridian
+                    </span>
+                </div>
+
+                {/* Card */}
+                <div className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-2xl shadow-xl p-8">
+                    {step === "credentials" ? (
+                        <>
+                            <h1 className="text-2xl font-bold text-neutral-900 text-center mb-1">
+                                Create your account
+                            </h1>
+                            <p className="text-neutral-500 text-center text-sm mb-8">
+                                Start your body intelligence journey
+                            </p>
+
+                            {error && (
+                                <div className="mb-6 p-3 rounded-xl bg-danger-500/10 border border-danger-500/20 text-danger-500 text-sm text-center">
+                                    {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleCredentialSubmit} className="space-y-5">
+                                <div>
+                                    <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                                        Display Name
+                                    </label>
+                                    <input
+                                        id="name"
+                                        type="text"
+                                        required
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="Your name"
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50/50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all text-sm"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="reg-email" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                                        Email
+                                    </label>
+                                    <input
+                                        id="reg-email"
+                                        type="email"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="you@example.com"
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50/50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all text-sm"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="reg-password" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                                        Password
+                                    </label>
+                                    <input
+                                        id="reg-password"
+                                        type="password"
+                                        required
+                                        minLength={8}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="At least 8 characters"
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-neutral-50/50 text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 transition-all text-sm"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold text-sm shadow-md hover:shadow-lg hover:from-primary-600 hover:to-primary-700 transition-all duration-200"
+                                >
+                                    Continue
+                                </button>
+                            </form>
+                        </>
+                    ) : (
+                        <>
+                            <h1 className="text-2xl font-bold text-neutral-900 text-center mb-1">
+                                What are you tracking?
+                            </h1>
+                            <p className="text-neutral-500 text-center text-sm mb-6">
+                                Select conditions or goals you want Meridian to focus on. You can change these later.
+                            </p>
+
+                            {error && (
+                                <div className="mb-6 p-3 rounded-xl bg-danger-500/10 border border-danger-500/20 text-danger-500 text-sm text-center">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2 mb-8">
+                                {COMMON_CONDITIONS.map((condition) => (
+                                    <button
+                                        key={condition}
+                                        type="button"
+                                        onClick={() => toggleCondition(condition)}
+                                        className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${selectedConditions.includes(condition)
+                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
+                                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200/50"
+                                            }`}
+                                    >
+                                        {condition}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setStep("credentials")}
+                                    className="flex-1 py-3 rounded-xl border border-neutral-200 text-neutral-600 font-medium text-sm hover:bg-neutral-50 transition-all"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    onClick={handleFinalSubmit}
+                                    disabled={loading}
+                                    className="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold text-sm shadow-md hover:shadow-lg disabled:opacity-50 transition-all duration-200"
+                                >
+                                    {loading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                                                <path d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="currentColor" className="opacity-75" />
+                                            </svg>
+                                            Creating...
+                                        </span>
+                                    ) : (
+                                        "Create Account"
+                                    )}
+                                </button>
+                            </div>
+                        </>
+                    )}
+
+                    {step === "credentials" && (
+                        <div className="mt-6 text-center">
+                            <span className="text-sm text-neutral-500">
+                                Already have an account?{" "}
+                                <Link
+                                    href="/login"
+                                    className="text-primary-600 font-semibold hover:text-primary-700"
+                                >
+                                    Sign In
+                                </Link>
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Progress indicator */}
+                <div className="flex justify-center mt-6 gap-2">
+                    <div className={`w-8 h-1.5 rounded-full transition-all ${step === "credentials" ? "bg-primary-500" : "bg-neutral-300"}`} />
+                    <div className={`w-8 h-1.5 rounded-full transition-all ${step === "conditions" ? "bg-primary-500" : "bg-neutral-300"}`} />
+                </div>
+            </div>
+        </div>
+    );
+}
