@@ -17,7 +17,7 @@ export async function PUT(request: NextRequest) {
         const body = await request.json();
         const { displayName } = body;
 
-        const updated = updateUser(user.id, {
+        const updated = await updateUser(user.id, {
             displayName: displayName || user.displayName,
         });
 

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
         let user;
         try {
-            user = createUser({
+            user = await createUser({
                 email: email.toLowerCase().trim(),
                 passwordHash,
                 displayName: name || null,
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         // Save conditions if provided
         if (conditions && Array.isArray(conditions) && conditions.length > 0) {
-            createConditions(user.id, conditions);
+            await createConditions(user.id, conditions);
         }
 
         // Create session

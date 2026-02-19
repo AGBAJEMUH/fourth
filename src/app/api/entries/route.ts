@@ -25,14 +25,16 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const limit = parseInt(searchParams.get("limit") || "10", 10);
 
-        const data = getEntries(user.id, limit);
+        const data = await getEntries(user.id, limit);
 
         // Attach body markers and meals to each entry
-        const enrichedEntries = data.entries.map((entry) => ({
-            ...entry,
-            bodyMarkers: getMarkersForEntry(entry.id),
-            meals: getMealsForEntry(entry.id),
-        }));
+        const enrichedEntries = await Promise.all(
+            data.entries.map(async (entry) => ({
+                ...entry,
+                bodyMarkers: await getMarkersForEntry(entry.id),
+                meals: await getMealsForEntry(entry.id),
+            }))
+        );
 
         return NextResponse.json({
             entries: enrichedEntries,
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Create entry
-        const entry = createEntry({
+        const entry = await createEntry({
             userId: user.id,
             entryDate: body.entryDate,
             sleepHours: body.sleepHours ?? null,
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
         // Create body markers
         if (body.bodyMarkers && Array.isArray(body.bodyMarkers)) {
             for (const marker of body.bodyMarkers) {
-                createBodyMarker({
+                await createBodyMarker({
                     entryId: entry.id,
                     userId: user.id,
                     bodyRegion: marker.bodyRegion,
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
         // Create meals
         if (body.meals && Array.isArray(body.meals)) {
             for (const meal of body.meals) {
-                createMeal({
+                await createMeal({
                     entryId: entry.id,
                     userId: user.id,
                     mealType: meal.mealType,

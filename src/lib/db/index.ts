@@ -53,8 +53,10 @@ export async function findUserById(id: string): Promise<DbUser | undefined> {
 export async function updateUser(id: string, data: Partial<DbUser>): Promise<DbUser | undefined> {
     if (USE_MOCK) return mockDb.updateUser(id, data);
 
+    const { createdAt, updatedAt, ...updateData } = data;
+
     const [updated] = await db.update(users)
-        .set({ ...data, updatedAt: new Date() })
+        .set({ ...updateData, updatedAt: new Date() })
         .where(eq(users.id, id))
         .returning();
     return updated ? mapUser(updated) : undefined;

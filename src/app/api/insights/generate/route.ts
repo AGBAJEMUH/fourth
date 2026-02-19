@@ -197,8 +197,8 @@ export async function POST() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const entries = getAllEntriesForAnalysis(user.id);
-        const markers = getAllMarkersForUser(user.id);
+        const entries = await getAllEntriesForAnalysis(user.id);
+        const markers = await getAllMarkersForUser(user.id);
 
         if (entries.length < 7) {
             return NextResponse.json(
@@ -213,7 +213,7 @@ export async function POST() {
         const trends = detectTrends(factors);
         const symptomAnalysis = analyzeSymptoms(markers);
 
-        const generatedInsights: ReturnType<typeof getInsights> = [];
+        const generatedInsights: any[] = [];
 
         // Generate correlation insights
         for (const pair of correlations.slice(0, 3)) {
@@ -232,7 +232,7 @@ export async function POST() {
                 description = `Higher ${factorA.toLowerCase()} tends to correspond with lower ${factorB.toLowerCase()}. This inverse relationship (${Math.round(pair.strength * 100)}% strength) is worth monitoring.`;
             }
 
-            const insight = createInsight({
+            const insight = await createInsight({
                 userId: user.id,
                 insightType: "correlation",
                 title,
@@ -264,7 +264,7 @@ export async function POST() {
                 ? `Your ${factorName.toLowerCase()} has been gradually improving over your recent entries. Keep up the positive habits!`
                 : `Your ${factorName.toLowerCase()} shows a declining trend. Consider reviewing recent lifestyle changes that may be contributing.`;
 
-            const insight = createInsight({
+            const insight = await createInsight({
                 userId: user.id,
                 insightType: "trend",
                 title,
@@ -288,7 +288,7 @@ export async function POST() {
             const topSymptom = symptomAnalysis[0];
             const regionName = topSymptom.region.replace(/_/g, " ");
 
-            const insight = createInsight({
+            const insight = await createInsight({
                 userId: user.id,
                 insightType: "prediction",
                 title: `Recurring ${topSymptom.symptom} in ${regionName}`,

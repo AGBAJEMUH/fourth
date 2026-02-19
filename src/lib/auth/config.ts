@@ -21,7 +21,7 @@ export async function getAuthUser(): Promise<DbUser | null> {
     const userId = getUserIdFromSession(token);
     if (!userId) return null;
 
-    const user = findUserById(userId);
+    const user = await findUserById(userId);
     return user || null;
 }
 

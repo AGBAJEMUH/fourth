@@ -19,7 +19,7 @@ export async function GET(
         }
 
         const { id } = await params;
-        const entry = getEntryById(id, user.id);
+        const entry = await getEntryById(id, user.id);
         if (!entry) {
             return NextResponse.json({ error: "Entry not found" }, { status: 404 });
         }
@@ -27,8 +27,8 @@ export async function GET(
         return NextResponse.json({
             entry: {
                 ...entry,
-                bodyMarkers: getMarkersForEntry(entry.id),
-                meals: getMealsForEntry(entry.id),
+                bodyMarkers: await getMarkersForEntry(entry.id),
+                meals: await getMealsForEntry(entry.id),
             },
         });
     } catch (error) {
@@ -51,7 +51,7 @@ export async function DELETE(
         }
 
         const { id } = await params;
-        const deleted = deleteEntry(id, user.id);
+        const deleted = await deleteEntry(id, user.id);
         if (!deleted) {
             return NextResponse.json({ error: "Entry not found" }, { status: 404 });
         }
