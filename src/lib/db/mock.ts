@@ -19,6 +19,8 @@ export interface DbUser {
     provider: string;
     onboardingDone: boolean;
     timezone: string | null;
+    role: string;
+    emailVerified: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -113,6 +115,8 @@ export function createUser(data: {
         provider: data.provider,
         onboardingDone: false,
         timezone: null,
+        role: "user",
+        emailVerified: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };

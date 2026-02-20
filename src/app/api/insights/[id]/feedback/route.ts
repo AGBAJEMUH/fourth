@@ -24,7 +24,7 @@ export async function POST(
 
         // In a full implementation, store feedback and use for ML training
         if (helpful === false) {
-            updateInsightStatus(id, "dismissed");
+            await updateInsightStatus(id, "dismissed");
         }
 
         return NextResponse.json({ success: true });

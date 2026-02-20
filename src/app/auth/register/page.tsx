@@ -168,7 +168,7 @@ export default function RegisterPage() {
                             )}
 
                             <div className="flex flex-wrap gap-2 mb-8">
-                                {COMMON_CONDITIONS.map((condition) => (
+                                {COMMON_CONDITIONS.map((condition: string) => (
                                     <button
                                         key={condition}
                                         type="button"
@@ -216,7 +216,7 @@ export default function RegisterPage() {
                             <span className="text-sm text-neutral-500">
                                 Already have an account?{" "}
                                 <Link
-                                    href="/login"
+                                    href="/auth/login"
                                     className="text-primary-600 font-semibold hover:text-primary-700"
                                 >
                                     Sign In

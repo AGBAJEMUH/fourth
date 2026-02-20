@@ -125,11 +125,11 @@ export default function LandingPage() {
 
           {/* CTA buttons */}
           <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden sm:inline-flex text-sm font-medium text-neutral-600 hover:text-primary-600 transition-colors px-3 py-2">
+            <Link href="/auth/login" className="hidden sm:inline-flex text-sm font-medium text-neutral-600 hover:text-primary-600 transition-colors px-3 py-2">
               Sign In
             </Link>
             <Link
-              href="/register"
+              href="/auth/register"
               className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-full shadow-md hover:shadow-lg hover:from-primary-600 hover:to-primary-700 transition-all duration-200"
             >
               Get Started
@@ -164,7 +164,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
               <Link
-                href="/register"
+                href="/auth/register"
                 className="inline-flex items-center justify-center px-6 py-3.5 text-base font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30 hover:from-primary-600 hover:to-primary-700 transition-all duration-200"
               >
                 Start Free Journal
@@ -403,7 +403,7 @@ export default function LandingPage() {
                 Your first insight is just 7 entries away.
               </p>
               <Link
-                href="/register"
+                href="/auth/register"
                 className="inline-flex items-center px-8 py-4 text-base font-semibold text-neutral-900 bg-white rounded-xl shadow-lg hover:shadow-xl hover:bg-neutral-50 transition-all duration-200"
               >
                 Start Free — No Credit Card

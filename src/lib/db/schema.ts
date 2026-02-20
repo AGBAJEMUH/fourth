@@ -13,6 +13,8 @@ export const users = pgTable("users", {
     displayName: text("display_name"),
     avatarUrl: text("avatar_url"),
     provider: text("provider").default("email").notNull(),
+    role: text("role").default("user").notNull(),
+    emailVerified: timestamp("email_verified"),
     onboardingDone: boolean("onboarding_done").default(false).notNull(),
     timezone: text("timezone"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -113,4 +115,29 @@ export const mealRelations = relations(meals, ({ one }) => ({
         fields: [meals.entryId],
         references: [journalEntries.id],
     }),
+}));
+
+// ---- Auth & Sessions ----
+export const sessions = pgTable("sessions", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const verificationTokens = pgTable("verification_tokens", {
+    identifier: text("identifier").notNull(), // email
+    token: text("token").notNull().unique(),
+    expires: timestamp("expires").notNull(),
+}, (t) => ({
+    pk: unique().on(t.identifier, t.token),
+}));
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+    identifier: text("identifier").notNull(), // email
+    token: text("token").notNull().unique(),
+    expires: timestamp("expires").notNull(),
+}, (t) => ({
+    pk: unique().on(t.identifier, t.token),
 }));

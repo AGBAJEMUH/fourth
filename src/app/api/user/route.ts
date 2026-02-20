@@ -4,21 +4,22 @@
    ============================================================ */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/auth/config";
+import { auth } from "@/auth";
 import { updateUser } from "@/lib/db";
 
 export async function PUT(request: NextRequest) {
     try {
-        const user = await getAuthUser();
-        if (!user) {
+        const session = await auth();
+
+        if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const body = await request.json();
         const { displayName } = body;
 
-        const updated = await updateUser(user.id, {
-            displayName: displayName || user.displayName,
+        const updated = await updateUser(session.user.id, {
+            displayName: displayName || session.user.name,
         });
 
         if (!updated) {

@@ -3,44 +3,43 @@
    Protects dashboard routes and redirects unauthenticated users.
    ============================================================ */
 
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import NextAuth from "next-auth";
+import authConfig from "@/auth.config";
+import {
+    DEFAULT_LOGIN_REDIRECT,
+    apiAuthPrefix,
+    authRoutes,
+    publicRoutes,
+} from "@/routes";
 
-export function middleware(request: NextRequest) {
-    const sessionToken = request.cookies.get("meridian_session")?.value;
-    const { pathname } = request.nextUrl;
+const { auth } = NextAuth(authConfig);
 
-    // Routes that require authentication
-    const protectedRoutes = ["/dashboard", "/journal", "/insights", "/timeline", "/settings"];
-    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
+export default auth((req) => {
+    const { nextUrl } = req;
+    const isLoggedIn = !!req.auth;
 
-    // Routes for unauthenticated users only (login, register)
-    const authRoutes = ["/login", "/register"];
-    const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+    const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
+    const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
+    const isAuthRoute = authRoutes.includes(nextUrl.pathname);
 
-    if (isProtectedRoute && !sessionToken) {
-        // Redirect to login if trying to access protected route without session
-        return NextResponse.redirect(new URL("/login", request.url));
+    if (isApiAuthRoute) {
+        return;
     }
 
-    if (isAuthRoute && sessionToken) {
-        // Redirect to dashboard if trying to access login/register while authenticated
-        return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (isAuthRoute) {
+        if (isLoggedIn) {
+            return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
+        }
+        return;
     }
 
-    return NextResponse.next();
-}
+    if (!isLoggedIn && !isPublicRoute) {
+        return Response.redirect(new URL("/auth/login", nextUrl));
+    }
+
+    return;
+});
 
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
-        "/((?!api|_next/static|_next/image|favicon.ico).*)",
-    ],
+    matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 };

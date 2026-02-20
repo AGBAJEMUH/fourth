@@ -13,7 +13,11 @@ export interface User {
   onboardingDone: boolean;
   timezone: string | null;
   createdAt: string;
+  role?: UserRole;
+  emailVerified?: Date | null;
 }
+
+export type UserRole = "user" | "admin";
 
 export interface UserCondition {
   id: string;

@@ -7,7 +7,7 @@
 
 import { generateId } from "@/lib/utils/helpers";
 import { db } from "./drizzle";
-import { users, journalEntries, bodyMarkers, meals, insights, userConditions } from "./schema";
+import { users, journalEntries, bodyMarkers, meals, insights, userConditions, sessions, verificationTokens, passwordResetTokens } from "./schema";
 import { eq, desc, and } from "drizzle-orm";
 import * as mockDb from "./mock"; // Renamed original index.ts content to mock.ts
 
@@ -53,7 +53,7 @@ export async function findUserById(id: string): Promise<DbUser | undefined> {
 export async function updateUser(id: string, data: Partial<DbUser>): Promise<DbUser | undefined> {
     if (USE_MOCK) return mockDb.updateUser(id, data);
 
-    const { createdAt, updatedAt, ...updateData } = data;
+    const { createdAt, updatedAt, emailVerified, ...updateData } = data;
 
     const [updated] = await db.update(users)
         .set({ ...updateData, updatedAt: new Date() })
@@ -62,13 +62,106 @@ export async function updateUser(id: string, data: Partial<DbUser>): Promise<DbU
     return updated ? mapUser(updated) : undefined;
 }
 
-// ---- Session Operations (Keep in-memory for simplicity unless Redis is added) ----
-// In a real prod app, use Redis or a DB table for sessions. 
-// For this V1, we'll keep the in-memory session store from mock.ts
-// but we could migrate it to a table if needed.
-export const createSession = mockDb.createSession;
-export const getUserIdFromSession = mockDb.getUserIdFromSession;
-export const deleteSession = mockDb.deleteSession;
+// ---- Session Operations ----
+export async function createSession(userId: string): Promise<string> {
+    const token = generateId();
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7); // 7 days
+
+    if (USE_MOCK) return mockDb.createSession(userId);
+
+    await db.insert(sessions).values({
+        userId,
+        token,
+        expiresAt,
+    });
+
+    return token;
+}
+
+export async function getUserIdFromSession(token: string): Promise<string | undefined> {
+    if (USE_MOCK) return mockDb.getUserIdFromSession(token);
+
+    const [session] = await db.select().from(sessions)
+        .where(and(eq(sessions.token, token), desc(sessions.expiresAt)))
+        .limit(1);
+
+    if (!session || session.expiresAt < new Date()) {
+        return undefined;
+    }
+
+    return session.userId;
+}
+
+export async function deleteSession(token: string): Promise<void> {
+    if (USE_MOCK) return mockDb.deleteSession(token);
+
+    await db.delete(sessions).where(eq(sessions.token, token));
+}
+
+// ---- Token Operations ----
+export async function getVerificationTokenByToken(token: string) {
+    if (USE_MOCK) return null; // Mock not implemented for tokens yet
+    const [verificationToken] = await db.select().from(verificationTokens).where(eq(verificationTokens.token, token));
+    return verificationToken;
+}
+
+export async function getVerificationTokenByEmail(email: string) {
+    if (USE_MOCK) return null;
+    const [verificationToken] = await db.select().from(verificationTokens).where(eq(verificationTokens.identifier, email));
+    return verificationToken;
+}
+
+export async function generateVerificationToken(email: string) {
+    if (USE_MOCK) return null;
+    const token = generateId();
+    const expires = new Date(new Date().getTime() + 3600 * 1000); // 1 hour
+
+    const existingToken = await getVerificationTokenByEmail(email);
+
+    if (existingToken) {
+        await db.delete(verificationTokens).where(eq(verificationTokens.identifier, email));
+    }
+
+    const [verificationToken] = await db.insert(verificationTokens).values({
+        identifier: email,
+        token,
+        expires,
+    }).returning();
+
+    return verificationToken;
+}
+
+export async function getPasswordResetTokenByToken(token: string) {
+    if (USE_MOCK) return null;
+    const [resetToken] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, token));
+    return resetToken;
+}
+
+export async function getPasswordResetTokenByEmail(email: string) {
+    if (USE_MOCK) return null;
+    const [resetToken] = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.identifier, email));
+    return resetToken;
+}
+
+export async function generatePasswordResetToken(email: string) {
+    if (USE_MOCK) return null;
+    const token = generateId();
+    const expires = new Date(new Date().getTime() + 3600 * 1000); // 1 hour
+
+    const existingToken = await getPasswordResetTokenByEmail(email);
+
+    if (existingToken) {
+        await db.delete(passwordResetTokens).where(eq(passwordResetTokens.identifier, email));
+    }
+
+    const [resetToken] = await db.insert(passwordResetTokens).values({
+        identifier: email,
+        token,
+        expires,
+    }).returning();
+
+    return resetToken;
+}
 
 // ---- Condition Operations ----
 export async function createConditions(userId: string, conditionNames: string[]): Promise<void> {

@@ -18,7 +18,7 @@ export async function getAuthUser(): Promise<DbUser | null> {
     const token = cookieStore.get(SESSION_COOKIE)?.value;
     if (!token) return null;
 
-    const userId = getUserIdFromSession(token);
+    const userId = await getUserIdFromSession(token);
     if (!userId) return null;
 
     const user = await findUserById(userId);
