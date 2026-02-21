@@ -23,6 +23,7 @@ export async function createUser(data: {
     passwordHash: string;
     displayName: string | null;
     provider: string;
+    emailVerified?: Date;
 }): Promise<DbUser> {
     if (USE_MOCK) return mockDb.createUser(data);
 
@@ -31,6 +32,7 @@ export async function createUser(data: {
         passwordHash: data.passwordHash,
         displayName: data.displayName,
         provider: data.provider,
+        emailVerified: data.emailVerified || null,
     }).returning();
 
     return mapUser(newUser);

@@ -3,25 +3,25 @@
    Extracts user from session cookie on API routes.
    ============================================================ */
 
-import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import { getUserIdFromSession, findUserById } from "@/lib/db";
 import type { DbUser } from "@/lib/db";
 
-const SESSION_COOKIE = "meridian_session";
+/**
+ * NextAuth v5 session cookie name.
+ * This is the default cookie used for JWT sessions.
+ */
+export const SESSION_COOKIE = "next-auth.session-token";
 
 /**
- * Get the authenticated user from the request cookies.
+ * Get the authenticated user from the NextAuth session.
  * Returns null if not authenticated.
  */
 export async function getAuthUser(): Promise<DbUser | null> {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
-    if (!token) return null;
+    const session = await auth();
+    if (!session?.user?.id) return null;
 
-    const userId = await getUserIdFromSession(token);
-    if (!userId) return null;
-
-    const user = await findUserById(userId);
+    const user = await findUserById(session.user.id);
     return user || null;
 }
 
@@ -49,4 +49,3 @@ export async function verifyPassword(
     return computed === hash;
 }
 
-export { SESSION_COOKIE };

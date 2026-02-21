@@ -87,11 +87,30 @@ export const insights = pgTable("insights", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ---- Auth & Sessions ----
+export const accounts = pgTable("accounts", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+}, (t) => ({
+    providerProviderAccountId: unique().on(t.provider, t.providerAccountId),
+}));
+
 // ---- Relations ----
 export const userRelations = relations(users, ({ many }) => ({
     entries: many(journalEntries),
     conditions: many(userConditions),
     insights: many(insights),
+    accounts: many(accounts),
 }));
 
 export const entryRelations = relations(journalEntries, ({ one, many }) => ({
@@ -117,7 +136,6 @@ export const mealRelations = relations(meals, ({ one }) => ({
     }),
 }));
 
-// ---- Auth & Sessions ----
 export const sessions = pgTable("sessions", {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
