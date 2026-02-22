@@ -22,17 +22,14 @@ export const {
     },
     events: {
         async createUser({ user }) {
-            // When OAuth creates a user, verify their email
-            if (user.email) {
-                const existingUser = await findUserByEmail(user.email);
-                if (existingUser) {
-                    // User already exists (from credentials) - just verify email
-                    await db.update(users).set({ emailVerified: new Date() }).where(eq(users.email, user.email));
-                }
+            // When OAuth creates a new user, the user object already has the name from Google
+            // Just verify email (the user is already created by the adapter)
+            if (user.email && user.id) {
+                await db.update(users).set({ emailVerified: new Date() }).where(eq(users.id, user.id));
             }
         },
         async linkAccount({ user }) {
-            // When linking OAuth account, verify email
+            // When linking OAuth account to existing credentials user, verify email
             if (user.id) {
                 await db.update(users).set({ emailVerified: new Date() }).where(eq(users.id, user.id));
             }
@@ -48,6 +45,10 @@ export const {
                     const existingUser = await findUserByEmail(profile.email);
                     if (existingUser) {
                         // User exists with this email - allow linking
+                        // Update display name if not set
+                        if (!existingUser.displayName && profile.name) {
+                            await db.update(users).set({ displayName: profile.name }).where(eq(users.id, existingUser.id));
+                        }
                         return true;
                     }
                 }

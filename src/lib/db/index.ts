@@ -15,7 +15,7 @@ import * as mockDb from "./mock"; // Renamed original index.ts content to mock.t
 export type { DbUser, DbEntry, DbBodyMarker, DbMeal, DbInsight, DbCondition } from "./mock";
 import type { DbUser, DbEntry, DbBodyMarker, DbMeal, DbInsight, DbCondition } from "./mock";
 
-const USE_MOCK = !process.env.DATABASE_URL;
+const USE_MOCK = false; // Using hardcoded DATABASE_URL in drizzle.ts
 
 // ---- User Operations ----
 export async function createUser(data: {
