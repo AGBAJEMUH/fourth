@@ -1,39 +1,43 @@
 "use client";
 
-import { useTransition, useState } from "react";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ResetSchema } from "@/lib/schemas";
-import { reset } from "@/actions/reset";
 import Link from "next/link";
 
 export default function ResetPage() {
-    const [error, setError] = useState<string | undefined>("");
-    const [success, setSuccess] = useState<string | undefined>("");
     const [isPending, startTransition] = useTransition();
+    const [resetSent, setResetSent] = useState(false);
+    const [error, setError] = useState<string | undefined>();
 
-    const {
-        register,
-        handleSubmit,
-        formState: { errors },
-    } = useForm<z.infer<typeof ResetSchema>>({
+    const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof ResetSchema>>({
         resolver: zodResolver(ResetSchema),
-        defaultValues: {
-            email: "",
-        },
+        defaultValues: { email: "" },
     });
 
-    const onSubmit = (values: z.infer<typeof ResetSchema>) => {
-        setError("");
-        setSuccess("");
-
-        startTransition(() => {
-            reset(values)
-                .then((data) => {
-                    setError(data?.error);
-                    setSuccess(data?.success);
+    const onSubmit = async (values: z.infer<typeof ResetSchema>) => {
+        setError(undefined);
+        startTransition(async () => {
+            try {
+                const response = await fetch("/api/reset", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(values),
                 });
+                const data = await response.json();
+
+                if (data?.success) {
+                    setResetSent(true);
+                    setTimeout(() => setResetSent(false), 5000);
+                } else {
+                    setError(data?.error || "Failed to send reset link");
+                }
+            } catch (err) {
+                setError("An unexpected error occurred");
+                console.error(err);
+            }
         });
     };
 
@@ -53,18 +57,15 @@ export default function ResetPage() {
                     </div>
                 )}
 
-                {success && (
+                {resetSent && (
                     <div className="mb-6 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm text-center">
-                        {success}
+                        Reset email sent!
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                     <div>
-                        <label
-                            htmlFor="email"
-                            className="block text-sm font-medium text-neutral-700 mb-1.5"
-                        >
+                        <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1.5">
                             Email
                         </label>
                         <input
@@ -81,18 +82,15 @@ export default function ResetPage() {
 
                     <button
                         type="submit"
-                        disabled={isPending}
+                        disabled={isPending || resetSent}
                         className="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-semibold text-sm shadow-md hover:shadow-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                     >
-                        {isPending ? "Sending..." : "Send Reset Link"}
+                        {resetSent ? "Email Sent!" : isPending ? "Sending..." : "Send Reset Link"}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center">
-                    <Link
-                        href="/login"
-                        className="text-sm text-neutral-500 hover:text-neutral-800 underline"
-                    >
+                    <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-800 underline">
                         Back to login
                     </Link>
                 </div>

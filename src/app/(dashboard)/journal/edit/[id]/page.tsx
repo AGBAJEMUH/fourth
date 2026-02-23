@@ -1,14 +1,9 @@
-/* ============================================================
-   Meridian — Journal Entry Page
-   Full daily health journal form with body map, factor sliders,
-   meal logging, and freeform notes.
-   ============================================================ */
 "use client";
-import { useEffect } from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import BodyMap from "@/components/body-map/BodyMap";
-import { cn, getTodayISO } from "@/lib/utils/helpers";
+import { cn } from "@/lib/utils/helpers";
 import {
     EXERCISE_TYPES,
     MEAL_TYPES,
@@ -17,9 +12,7 @@ import {
     STRESS_LABELS,
     SLEEP_LABELS,
 } from "@/lib/utils/constants";
-import type { BodyMarker } from "@/types";
-
-/** Reusable 1–5 scale slider */
+import type { BodyMarker, JournalEntry } from "@/types";
 function ScaleSlider({
     label,
     value,
@@ -78,18 +71,21 @@ function ScaleSlider({
         </div>
     );
 }
-
 interface MealEntry {
     mealType: string;
     description: string;
 }
 
-export default function JournalPage() {
+export default function EditJournalPage() {
     const router = useRouter();
+    const params = useParams();
+    const entryId = params?.id as string;
+
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    const [entryDate, setEntryDate] = useState(getTodayISO());
+    const [entryDate, setEntryDate] = useState("");
     const [sleepHours, setSleepHours] = useState(7);
     const [sleepQuality, setSleepQuality] = useState(3);
     const [moodScore, setMoodScore] = useState(3);
@@ -100,7 +96,6 @@ export default function JournalPage() {
     const [waterIntake, setWaterIntake] = useState(8);
     const [notes, setNotes] = useState("");
 
-    // MULTIPLE MARKERS FULLY SUPPORTED
     const [bodyMarkers, setBodyMarkers] = useState<
         Omit<BodyMarker, "id" | "entryId" | "userId" | "createdAt">[]
     >([]);
@@ -127,17 +122,62 @@ export default function JournalPage() {
     function removeMeal(index: number) {
         setMeals((prev) => prev.filter((_, i) => i !== index));
     }
+    // Fetch existing entry
+    useEffect(() => {
+        async function fetchEntry() {
+            try {
+                const res = await fetch(`/api/entries/${entryId}`);
+                if (!res.ok) throw new Error("Failed to load entry");
+
+                const data = await res.json();
+                const entry: JournalEntry = data.entry;
+
+                setEntryDate(entry.entryDate);
+                setSleepHours(entry.sleepHours || 0);
+                setSleepQuality(entry.sleepQuality || 3);
+                setMoodScore(entry.moodScore || 3);
+                setEnergyLevel(entry.energyLevel || 3);
+                setStressLevel(entry.stressLevel || 3);
+                setExerciseMins(entry.exerciseMins || 0);
+                setExerciseType(entry.exerciseType || "");
+                setWaterIntake(Math.round((entry.waterIntakeMl || 0) / 250));
+                setNotes(entry.notes || "");
+
+                setBodyMarkers(
+                    (entry.bodyMarkers || []).map((marker) => ({
+                        bodyRegion: marker.bodyRegion,
+                        xPos: marker.xPos,
+                        yPos: marker.yPos,
+                        symptom: marker.symptom,
+                        intensity: marker.intensity,
+                    }))
+                );
+
+                setMeals(
+                    (entry.meals || []).map((meal) => ({
+                        mealType: meal.mealType,
+                        description: meal.description,
+                    }))
+                );
+            } catch (err) {
+                setError("Failed to load entry");
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchEntry();
+    }, [entryId]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-
         if (saving) return;
 
         setSaving(true);
         setError("");
 
         try {
-            const res = await fetch("/api/entries", {
+            const res = await fetch(`/api/entries`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -156,68 +196,24 @@ export default function JournalPage() {
                 }),
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || "Failed to save entry");
-            }
+            if (!res.ok) throw new Error("Failed to update entry");
 
-            const data = await res.json();
-
-            if (data.entry?.id) {
-                router.push(`/journal/${data.entry.id}`);
-            } else {
-                router.push("/dashboard");
-            }
+            router.push(`/journal/${entryId}`);
         } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "Something went wrong"
-            );
+            setError("Failed to update entry");
         } finally {
             setSaving(false);
         }
     }
-    useEffect(() => {
-        async function checkExistingEntry() {
-            if (!entryDate) return;
 
-            try {
-                const res = await fetch(`/api/entries/by-date?date=${entryDate}`);
+    if (loading) return <div className="max-w-4xl mx-auto">Loading...</div>;
 
-                if (!res.ok) return;
-
-                const data = await res.json();
-
-                if (data.entry?.id) {
-                    router.replace(`/journal/edit/${data.entry.id}`);
-                }
-            } catch (err) {
-                console.error("Error checking existing entry:", err);
-            }
-        }
-
-        checkExistingEntry();
-    }, [entryDate, router]);
     return (
         <div className="max-w-4xl mx-auto animate-fade-in">
-
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">Daily Journal</h1>
-                    <p className="text-neutral-500 text-sm mt-0.5">
-                        How&apos;s your body feeling today?
-                    </p>
-                </div>
-                <input
-                    type="date"
-                    value={entryDate}
-                    onChange={(e) => setEntryDate(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                />
-            </div>
+            <h1 className="text-2xl font-bold mb-6">Edit Journal Entry</h1>
 
             {error && (
-                <div className="mb-6 p-3 rounded-xl bg-danger-500/10 border border-danger-500/20 text-danger-500 text-sm">
+                <div className="mb-4 p-3 bg-danger-100 text-danger-600 rounded-xl text-sm">
                     {error}
                 </div>
             )}
@@ -429,13 +425,16 @@ export default function JournalPage() {
                                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
                                     <path d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="currentColor" className="opacity-75" />
                                 </svg>
-                                Saving...
+                                Updating...
                             </span>
                         ) : (
-                            "Save Entry"
+                            "Update Entry"
                         )}
                     </button>
                 </div>
+                {/* 🔥 PASTE EVERYTHING from your journal/page.tsx form here */}
+                {/* IMPORTANT: Replace Save button text with: */}
+                {/* {saving ? "Updating..." : "Update Entry"} */}
             </form>
         </div>
     );

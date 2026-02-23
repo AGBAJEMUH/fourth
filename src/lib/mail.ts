@@ -1,22 +1,23 @@
+import "server-only";
 import nodemailer from "nodemailer";
 import { renderToStaticMarkup } from "react-dom/server";
 
 // Create reusable transporter
 const createTransporter = () => {
-    const host = process.env.GMAIL_SMTP_HOST;
-    const port = parseInt(process.env.GMAIL_SMTP_PORT || "587");
-    const user = process.env.GMAIL_SMTP_USER;
-    const pass = process.env.GMAIL_SMTP_PASS;
+  const host = process.env.GMAIL_SMTP_HOST;
+  const port = parseInt(process.env.GMAIL_SMTP_PORT || "587");
+  const user = process.env.GMAIL_SMTP_USER;
+  const pass = process.env.GMAIL_SMTP_PASS;
 
-    return nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: {
-            user,
-            pass,
-        },
-    });
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: {
+      user,
+      pass,
+    },
+  });
 };
 
 const domain = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -235,43 +236,43 @@ const createEmailTemplate = (content: string, title: string) => `
 
 // Email sending function
 const sendEmail = async (to: string, subject: string, html: string) => {
-    // Check if Gmail SMTP is configured
-    if (!process.env.GMAIL_SMTP_USER || !process.env.GMAIL_SMTP_PASS ||
-        process.env.GMAIL_SMTP_USER === "your-email@gmail.com") {
-        console.log("----------------------------------------");
-        console.log("📧 Email Service (Simulated)");
-        console.log(`To: ${to}`);
-        console.log(`Subject: ${subject}`);
-        console.log("Note: Gmail SMTP not configured - set GMAIL_SMTP_USER and GMAIL_SMTP_PASS in .env.local");
-        console.log("----------------------------------------");
-        return;
-    }
+  // Check if Gmail SMTP is configured
+  if (!process.env.GMAIL_SMTP_USER || !process.env.GMAIL_SMTP_PASS ||
+    process.env.GMAIL_SMTP_USER === "your-email@gmail.com") {
+    console.log("----------------------------------------");
+    console.log("📧 Email Service (Simulated)");
+    console.log(`To: ${to}`);
+    console.log(`Subject: ${subject}`);
+    console.log("Note: Gmail SMTP not configured - set GMAIL_SMTP_USER and GMAIL_SMTP_PASS in .env.local");
+    console.log("----------------------------------------");
+    return;
+  }
 
-    try {
-        const transporter = createTransporter();
+  try {
+    const transporter = createTransporter();
 
-        const info = await transporter.sendMail({
-            from: `"${fromName}" <${fromEmail}>`,
-            to,
-            subject,
-            html,
-        });
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    });
 
-        console.log("✅ Email sent successfully:", info.messageId);
-        return info;
-    } catch (error) {
-        console.error("❌ Email sending failed:", error);
-        throw error;
-    }
+    console.log("✅ Email sent successfully:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
+    throw error;
+  }
 };
 
 export const sendVerificationEmail = async (
-    email: string,
-    token: string
+  email: string,
+  token: string
 ) => {
-    const confirmLink = `${domain}/auth/new-verification?token=${token}`;
+  const confirmLink = `${domain}/auth/new-verification?token=${token}`;
 
-    const content = `
+  const content = `
     <h1 class="email-title">Verify your email address</h1>
     <p class="email-text">
       Welcome to <strong>${appName}</strong>! To get started, please confirm your email address by clicking the button below.
@@ -290,18 +291,18 @@ export const sendVerificationEmail = async (
     </div>
   `;
 
-    const html = createEmailTemplate(content, "Verify your email");
+  const html = createEmailTemplate(content, "Verify your email");
 
-    await sendEmail(email, "Verify your email — Meridian", html);
+  await sendEmail(email, "Verify your email — Meridian", html);
 };
 
 export const sendPasswordResetEmail = async (
-    email: string,
-    token: string
+  email: string,
+  token: string
 ) => {
-    const resetLink = `${domain}/auth/reset-password?token=${token}`;
+  const resetLink = `${domain}/auth/reset-password?token=${token}`;
 
-    const content = `
+  const content = `
     <h1 class="email-title">Reset your password</h1>
     <p class="email-text">
       We received a request to reset your <strong>${appName}</strong> password. Click the button below to create a new password.
@@ -320,7 +321,7 @@ export const sendPasswordResetEmail = async (
     </div>
   `;
 
-    const html = createEmailTemplate(content, "Reset your password");
+  const html = createEmailTemplate(content, "Reset your password");
 
-    await sendEmail(email, "Reset your password — Meridian", html);
+  await sendEmail(email, "Reset your password — Meridian", html);
 };

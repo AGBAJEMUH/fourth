@@ -19,22 +19,32 @@ export async function GET(
         }
 
         const { id } = await params;
+        console.log("Fetching entry with ID:", id);
+
         const entry = await getEntryById(id, user.id);
+        console.log("Entry found:", entry ? "yes" : "no");
+
         if (!entry) {
             return NextResponse.json({ error: "Entry not found" }, { status: 404 });
         }
 
+        const markers = await getMarkersForEntry(entry.id);
+        const meals = await getMealsForEntry(entry.id);
+
+        console.log("Markers found:", markers.length);
+        console.log("Meals found:", meals.length);
+
         return NextResponse.json({
             entry: {
                 ...entry,
-                bodyMarkers: await getMarkersForEntry(entry.id),
-                meals: await getMealsForEntry(entry.id),
+                bodyMarkers: markers,
+                meals: meals,
             },
         });
     } catch (error) {
         console.error("GET entry error:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
             { status: 500 }
         );
     }

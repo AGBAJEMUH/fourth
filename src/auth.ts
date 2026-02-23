@@ -22,10 +22,13 @@ export const {
     },
     events: {
         async createUser({ user }) {
-            // When OAuth creates a new user, the user object already has the name from Google
-            // Just verify email (the user is already created by the adapter)
-            if (user.email && user.id) {
-                await db.update(users).set({ emailVerified: new Date() }).where(eq(users.id, user.id));
+            if (user.id) {
+                await db.update(users)
+                    .set({
+                        emailVerified: new Date(),
+                        displayName: user.name ?? null, // 👈 map OAuth name
+                    })
+                    .where(eq(users.id, user.id));
             }
         },
         async linkAccount({ user }) {

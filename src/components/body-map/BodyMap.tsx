@@ -179,6 +179,7 @@ export default function BodyMap({ markers, onAddMarker, onRemoveMarker, readonly
                                 {formatRegion(pendingRegion)}
                             </span>
                             <button
+                                type="button"
                                 onClick={() => setShowPopover(false)}
                                 className="w-6 h-6 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400"
                             >
@@ -194,6 +195,7 @@ export default function BodyMap({ markers, onAddMarker, onRemoveMarker, readonly
                             <div className="flex flex-wrap gap-1.5">
                                 {COMMON_SYMPTOMS.slice(0, 8).map((symptom) => (
                                     <button
+                                        type="button"
                                         key={symptom}
                                         onClick={() => setSelectedSymptom(symptom)}
                                         className={cn(
@@ -233,6 +235,7 @@ export default function BodyMap({ markers, onAddMarker, onRemoveMarker, readonly
                         </div>
 
                         <button
+                            type="button"
                             onClick={handleConfirmMarker}
                             disabled={!selectedSymptom}
                             className="w-full py-2 rounded-lg bg-primary-500 text-white text-xs font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -259,6 +262,7 @@ export default function BodyMap({ markers, onAddMarker, onRemoveMarker, readonly
                             </div>
                             {!readonly && (
                                 <button
+                                    type="button"
                                     onClick={() => onRemoveMarker(i)}
                                     className="text-neutral-400 hover:text-danger-500 text-xs transition-colors"
                                 >

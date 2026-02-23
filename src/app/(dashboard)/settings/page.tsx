@@ -1,13 +1,8 @@
-/* ============================================================
-   Meridian — Settings Page
-   User profile management with account info and preferences.
-   ============================================================ */
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { reset } from "@/actions/reset";
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -26,13 +21,10 @@ export default function SettingsPage() {
         }
     }, [session]);
 
+    // Handle saving the name change
     async function handleSave() {
         setSaving(true);
         try {
-            // Update session and DB (needs server action for update, but for now just mock or use API)
-            // Ideally we use a server action `updateSettings`. 
-            // For now, let's assume the API /api/user exists or we just simulate.
-            // But we should update the session client side too.
             await update({ name });
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
@@ -43,18 +35,33 @@ export default function SettingsPage() {
         }
     }
 
-    const onResetPassword = () => {
+    // Handle password reset request
+    const onResetPassword = async () => {
         if (!email) return;
-        startTransition(() => {
-            reset({ email })
-                .then((data) => {
-                    if (data?.success) {
-                        setResetSent(true);
-                        setTimeout(() => setResetSent(false), 5000);
-                    }
+
+        startTransition(async () => {
+            try {
+                const response = await fetch("/api/reset", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ email }),
                 });
+
+                const data = await response.json();
+
+                if (data?.success) {
+                    setResetSent(true);
+                    setTimeout(() => setResetSent(false), 5000);
+                } else {
+                    console.error(data?.error || "Password reset failed");
+                }
+            } catch (error) {
+                console.error("Error sending password reset email:", error);
+            }
         });
-    }
+    };
 
     return (
         <div className="max-w-2xl mx-auto animate-fade-in">

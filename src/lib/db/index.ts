@@ -227,6 +227,42 @@ export async function getEntryById(id: string, userId: string): Promise<DbEntry 
     return entry ? mapEntry(entry) : undefined;
 }
 
+export async function getEntryByDate(userId: string, entryDate: string): Promise<DbEntry | undefined> {
+    if (USE_MOCK) return undefined;
+
+    const [entry] = await db.select().from(journalEntries)
+        .where(and(eq(journalEntries.userId, userId), eq(journalEntries.entryDate, entryDate)));
+
+    return entry ? mapEntry(entry) : undefined;
+}
+
+export async function updateEntry(id: string, data: Partial<Omit<DbEntry, "id" | "createdAt" | "updatedAt">>): Promise<DbEntry | undefined> {
+    if (USE_MOCK) return undefined;
+
+    const updateData: any = {
+        updatedAt: new Date(),
+    };
+
+    if (data.sleepHours !== undefined) updateData.sleepHours = data.sleepHours ? String(data.sleepHours) : null;
+    if (data.sleepQuality !== undefined) updateData.sleepQuality = data.sleepQuality;
+    if (data.stressLevel !== undefined) updateData.stressLevel = data.stressLevel;
+    if (data.energyLevel !== undefined) updateData.energyLevel = data.energyLevel;
+    if (data.moodScore !== undefined) updateData.moodScore = data.moodScore;
+    if (data.exerciseMins !== undefined) updateData.exerciseMins = data.exerciseMins;
+    if (data.exerciseType !== undefined) updateData.exerciseType = data.exerciseType;
+    if (data.waterIntakeMl !== undefined) updateData.waterIntakeMl = data.waterIntakeMl;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.weatherTemp !== undefined) updateData.weatherTemp = data.weatherTemp ? String(data.weatherTemp) : null;
+    if (data.weatherCond !== undefined) updateData.weatherCond = data.weatherCond;
+
+    const [entry] = await db.update(journalEntries)
+        .set(updateData)
+        .where(eq(journalEntries.id, id))
+        .returning();
+
+    return entry ? mapEntry(entry) : undefined;
+}
+
 export async function deleteEntry(id: string, userId: string): Promise<boolean> {
     if (USE_MOCK) return mockDb.deleteEntry(id, userId);
 
@@ -238,18 +274,33 @@ export async function deleteEntry(id: string, userId: string): Promise<boolean> 
 }
 
 // ---- Marker Operations ----
-export async function createBodyMarker(data: Omit<DbBodyMarker, "id" | "createdAt">): Promise<DbBodyMarker> {
+export async function createBodyMarker(
+    data: Omit<DbBodyMarker, "id" | "createdAt">
+): Promise<DbBodyMarker> {
     if (USE_MOCK) return mockDb.createBodyMarker(data);
 
-    const [marker] = await db.insert(bodyMarkers).values({
-        entryId: data.entryId,
-        userId: data.userId,
-        bodyRegion: data.bodyRegion,
-        xPos: String(data.xPos),
-        yPos: String(data.yPos),
-        symptom: data.symptom,
-        intensity: data.intensity,
-    }).returning();
+    const [marker] = await db
+        .insert(bodyMarkers)
+        .values({
+            entryId: data.entryId,
+            userId: data.userId,
+            bodyRegion: data.bodyRegion,
+            xPos: String(data.xPos),
+            yPos: String(data.yPos),
+            symptom: data.symptom,
+            intensity: data.intensity,
+        })
+        .onConflictDoUpdate({
+            target: [bodyMarkers.entryId, bodyMarkers.bodyRegion, bodyMarkers.symptom], // composite unique key
+            set: {
+                userId: data.userId,
+                xPos: String(data.xPos),
+                yPos: String(data.yPos),
+                intensity: data.intensity,
+                // optionally update any other columns like updatedAt
+            },
+        })
+        .returning();
 
     return mapMarker(marker);
 }
@@ -269,16 +320,30 @@ export async function getAllMarkersForUser(userId: string): Promise<DbBodyMarker
 }
 
 // ---- Meal Operations ----
-export async function createMeal(data: Omit<DbMeal, "id" | "createdAt">): Promise<DbMeal> {
+export async function createMeal(
+    data: Omit<DbMeal, "id" | "createdAt">
+): Promise<DbMeal> {
     if (USE_MOCK) return mockDb.createMeal(data);
 
-    const [meal] = await db.insert(meals).values({
-        entryId: data.entryId,
-        userId: data.userId,
-        mealType: data.mealType,
-        description: data.description,
-        foods: data.foods,
-    }).returning();
+    const [meal] = await db
+        .insert(meals)
+        .values({
+            entryId: data.entryId,
+            userId: data.userId,
+            mealType: data.mealType,
+            description: data.description,
+            foods: data.foods,
+        })
+        .onConflictDoUpdate({
+            target: [meals.entryId, meals.mealType], // composite unique key
+            set: {
+                description: data.description,
+                foods: data.foods,
+                userId: data.userId,
+                // optionally update updatedAt here if you have one
+            },
+        })
+        .returning();
 
     return mapMeal(meal);
 }
@@ -369,4 +434,31 @@ function mapInsight(row: any): DbInsight {
         confidence: Number(row.confidence),
         createdAt: row.createdAt.toISOString()
     };
+}
+export async function deleteMarkersForEntry(entryId: string) {
+    return db.delete(bodyMarkers).where(eq(bodyMarkers.entryId, entryId));
+}
+
+export async function deleteMealsForEntry(entryId: string) {
+    return db.delete(meals).where(eq(meals.entryId, entryId));
+}
+export async function getEntryByUserAndDate(
+    userId: string,
+    entryDate: string
+) {
+    const result = await db
+        .select({
+            id: journalEntries.id,
+            entryDate: journalEntries.entryDate,
+        })
+        .from(journalEntries)
+        .where(
+            and(
+                eq(journalEntries.userId, userId),
+                eq(journalEntries.entryDate, entryDate)
+            )
+        )
+        .limit(1);
+
+    return result[0] ?? null;
 }
