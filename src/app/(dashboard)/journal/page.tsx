@@ -108,7 +108,8 @@ export default function JournalPage() {
     const [meals, setMeals] = useState<MealEntry[]>([]);
     const [activeMealType, setActiveMealType] = useState("");
     const [mealDescription, setMealDescription] = useState("");
-
+    const [existingEntryId, setExistingEntryId] = useState<string | null>(null);
+    const [checkingDate, setCheckingDate] = useState(false);
     function addMeal() {
         if (!activeMealType || !mealDescription.trim()) return;
 
@@ -130,8 +131,7 @@ export default function JournalPage() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-
-        if (saving) return;
+        if (saving || existingEntryId) return;
 
         setSaving(true);
         setError("");
@@ -177,26 +177,39 @@ export default function JournalPage() {
         }
     }
     useEffect(() => {
+        let cancelled = false;
+
         async function checkExistingEntry() {
             if (!entryDate) return;
+
+            setCheckingDate(true);
 
             try {
                 const res = await fetch(`/api/entries/by-date?date=${entryDate}`);
 
-                if (!res.ok) return;
+                if (!res.ok) {
+                    if (!cancelled) setExistingEntryId(null);
+                    return;
+                }
 
                 const data = await res.json();
 
-                if (data.entry?.id) {
-                    router.replace(`/journal/edit/${data.entry.id}`);
+                if (!cancelled) {
+                    setExistingEntryId(data.entry?.id || null);
                 }
             } catch (err) {
-                console.error("Error checking existing entry:", err);
+                if (!cancelled) setExistingEntryId(null);
+            } finally {
+                if (!cancelled) setCheckingDate(false);
             }
         }
 
         checkExistingEntry();
-    }, [entryDate, router]);
+
+        return () => {
+            cancelled = true; // prevents race condition overwrite
+        };
+    }, [entryDate]);
     return (
         <div className="max-w-4xl mx-auto animate-fade-in">
 
@@ -215,14 +228,40 @@ export default function JournalPage() {
                     className="px-3 py-2 rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
                 />
             </div>
+            {existingEntryId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full text-center">
+                        <h2 className="text-lg font-bold text-neutral-900 mb-2">
+                            Entry Already Exists
+                        </h2>
+                        <p className="text-sm text-neutral-600 mb-4">
+                            A journal entry already exists for this date.
+                            Would you like to edit it instead?
+                        </p>
 
+                        <button
+                            onClick={() => router.push(`/journal/edit/${existingEntryId}`)}
+                            className="px-5 py-2 rounded-xl bg-primary-500 text-white text-sm font-semibold hover:bg-primary-600"
+                        >
+                            Edit Entry
+                        </button>
+
+                        <p className="text-xs text-neutral-400 mt-4">
+                            Change the date above to create a new entry.
+                        </p>
+                    </div>
+                </div>
+            )}
             {error && (
                 <div className="mb-6 p-3 rounded-xl bg-danger-500/10 border border-danger-500/20 text-danger-500 text-sm">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form
+                onSubmit={handleSubmit}
+                className={existingEntryId ? "pointer-events-none opacity-40" : ""}
+            >
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* ---- Left Column: Body Map ---- */}
                     <div>
