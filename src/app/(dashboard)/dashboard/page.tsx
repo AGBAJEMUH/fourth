@@ -72,6 +72,7 @@ export default function DashboardPage() {
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [insights, setInsights] = useState<Insight[]>([]);
     const [loading, setLoading] = useState(true);
+    const [countentries, setcountEntries] = useState<JournalEntry[]>([]);
 
     useEffect(() => {
         async function fetchData() {
@@ -95,6 +96,26 @@ export default function DashboardPage() {
             }
         }
         fetchData();
+    }, []);
+    useEffect(() => {
+        async function fetchcountData() {
+            try {
+                const [countentriesRes] = await Promise.all([
+                    fetch("/api/entries"),
+
+                ]);
+                if (countentriesRes.ok) {
+                    const data = await countentriesRes.json();
+                    setcountEntries(data.countentries || []);
+                }
+
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchcountData();
     }, []);
 
     if (loading) {
@@ -168,8 +189,8 @@ export default function DashboardPage() {
                 />
                 <MetricCard
                     label="Total Entries"
-                    value={entries.length.toString()}
-                    sublabel={entries.length >= 7 ? "Insights ready!" : `${7 - entries.length} more for insights`}
+                    value={countentries.length.toString()}
+                    sublabel={countentries.length >= 7 ? "Insights ready!" : `${7 - countentries.length} more for insights`}
                     color="text-accent-500"
                     icon="📊"
                 />
@@ -244,15 +265,15 @@ export default function DashboardPage() {
                                 Collecting data...
                             </h3>
                             <p className="text-xs text-neutral-400">
-                                {entries.length < 7
-                                    ? `${7 - entries.length} more entries needed for AI insights`
+                                {countentries.length < 7
+                                    ? `${7 - countentries.length} more entries needed for AI insights`
                                     : "Generating your first insights..."}
                             </p>
                             {/* Progress bar */}
                             <div className="mt-4 h-2 bg-neutral-100 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-gradient-to-r from-accent-400 to-primary-400 rounded-full transition-all duration-500"
-                                    style={{ width: `${Math.min(100, (entries.length / 7) * 100)}%` }}
+                                    style={{ width: `${Math.min(100, (countentries.length / 7) * 100)}%` }}
                                 />
                             </div>
                         </div>

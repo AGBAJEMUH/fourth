@@ -201,6 +201,24 @@ export async function getConditions(userId: string): Promise<{ condition: string
     return rows;
 }
 
+export async function deleteCondition(userId: string, conditionName: string): Promise<void> {
+    if (USE_MOCK) {
+        const conditions = mockDb.getConditions(userId);
+        const toDelete = conditions.find(c => c.condition === conditionName);
+        if (toDelete) {
+            // In mock, we'd need to implement delete - for now just return
+        }
+        return;
+    }
+
+    await db.delete(userConditions).where(
+        and(
+            eq(userConditions.userId, userId),
+            eq(userConditions.condition, conditionName)
+        )
+    );
+}
+
 // ---- Journal Operations ----
 export async function createEntry(data: Omit<DbEntry, "id" | "createdAt" | "updatedAt">): Promise<DbEntry> {
     if (USE_MOCK) return mockDb.createEntry(data);

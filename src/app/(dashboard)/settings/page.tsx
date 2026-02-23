@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { COMMON_CONDITIONS } from "@/lib/utils/constants";
-import { getConditions, createConditions } from "@/lib/db";
+import { getConditions, createConditions, deleteCondition } from "@/lib/db";
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -16,6 +16,7 @@ export default function SettingsPage() {
     const [resetSent, setResetSent] = useState(false);
     const [isPending, startTransition] = useTransition();
     const [userConditions, setUserConditions] = useState<string[]>([]);
+    const [originalConditions, setOriginalConditions] = useState<string[]>([]);
     const [conditionsLoading, setConditionsLoading] = useState(true);
     const [savingConditions, setSavingConditions] = useState(false);
 
@@ -33,7 +34,9 @@ export default function SettingsPage() {
 
             try {
                 const conditions = await getConditions(session.user.id);
-                setUserConditions(conditions.map(c => c.condition));
+                const conditionNames = conditions.map(c => c.condition);
+                setUserConditions(conditionNames);
+                setOriginalConditions(conditionNames);
             } catch (err) {
                 console.error("Failed to fetch conditions:", err);
             } finally {
@@ -95,14 +98,34 @@ export default function SettingsPage() {
         );
     }
 
-    // Save conditions
+    // Save conditions - add new ones and remove deselected ones
     async function handleSaveConditions() {
         if (!session?.user?.id) return;
 
         setSavingConditions(true);
         try {
-            await createConditions(session.user.id, userConditions);
-            router.refresh();
+            // Find conditions to add (in userConditions but not in original)
+            const conditionsToAdd = userConditions.filter(
+                c => !originalConditions.includes(c)
+            );
+
+            // Find conditions to remove (in original but not in userConditions)
+            const conditionsToRemove = originalConditions.filter(
+                c => !userConditions.includes(c)
+            );
+
+            // Add new conditions
+            if (conditionsToAdd.length > 0) {
+                await createConditions(session.user.id, conditionsToAdd);
+            }
+
+            // Remove deselected conditions
+            for (const condition of conditionsToRemove) {
+                await deleteCondition(session.user.id, condition);
+            }
+
+            // Update original conditions to reflect changes
+            setOriginalConditions([...userConditions]);
 
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
