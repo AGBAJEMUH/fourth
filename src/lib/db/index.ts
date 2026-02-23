@@ -166,18 +166,29 @@ export async function generatePasswordResetToken(email: string) {
 }
 
 // ---- Condition Operations ----
-export async function createConditions(userId: string, conditionNames: string[]): Promise<void> {
+export async function createConditions(
+    userId: string,
+    conditionNames: string[]
+): Promise<void> {
     if (USE_MOCK) return mockDb.createConditions(userId, conditionNames);
 
     if (conditionNames.length === 0) return;
 
-    await db.insert(userConditions).values(
-        conditionNames.map(name => ({
-            userId,
-            condition: name,
-            severity: 3
-        }))
-    );
+    await db
+        .insert(userConditions)
+        .values(
+            conditionNames.map((name) => ({
+                userId,
+                condition: name,
+                severity: 3,
+            }))
+        )
+        .onConflictDoUpdate({
+            target: [userConditions.userId, userConditions.condition],
+            set: {
+                severity: 3, // or keep existing if you prefer
+            },
+        });
 }
 
 export async function getConditions(userId: string): Promise<{ condition: string }[]> {
@@ -216,15 +227,22 @@ export async function createEntry(data: Omit<DbEntry, "id" | "createdAt" | "upda
 export async function getEntries(userId: string, limit = 10): Promise<{ entries: DbEntry[]; totalCount: number }> {
     if (USE_MOCK) return mockDb.getEntries(userId, limit);
 
+    // Get total count of all entries for this user
+    const allRows = await db.select({ id: journalEntries.id })
+        .from(journalEntries)
+        .where(eq(journalEntries.userId, userId));
+
+    const totalCount = allRows.length;
+
+    // Get paginated entries
     const rows = await db.select().from(journalEntries)
         .where(eq(journalEntries.userId, userId))
         .orderBy(desc(journalEntries.entryDate))
         .limit(limit);
 
-    // Note: Total count would require a separate query, simulating for now
     return {
         entries: rows.map(mapEntry),
-        totalCount: rows.length
+        totalCount
     };
 }
 

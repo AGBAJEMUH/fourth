@@ -102,6 +102,8 @@ export default function SettingsPage() {
         setSavingConditions(true);
         try {
             await createConditions(session.user.id, userConditions);
+            router.refresh();
+
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         } catch (err) {
@@ -179,8 +181,8 @@ export default function SettingsPage() {
                                     type="button"
                                     onClick={() => toggleCondition(condition)}
                                     className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${userConditions.includes(condition)
-                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
-                                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200/50"
+                                        ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
+                                        : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200/50"
                                         }`}
                                 >
                                     {condition}
