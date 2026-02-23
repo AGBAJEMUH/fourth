@@ -1,6 +1,5 @@
 import "server-only";
 import nodemailer from "nodemailer";
-import { renderToStaticMarkup } from "react-dom/server";
 
 // Create reusable transporter
 const createTransporter = () => {
