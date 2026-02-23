@@ -3,6 +3,8 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { COMMON_CONDITIONS } from "@/lib/utils/constants";
+import { getConditions, createConditions } from "@/lib/db";
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -13,6 +15,9 @@ export default function SettingsPage() {
     const [saved, setSaved] = useState(false);
     const [resetSent, setResetSent] = useState(false);
     const [isPending, startTransition] = useTransition();
+    const [userConditions, setUserConditions] = useState<string[]>([]);
+    const [conditionsLoading, setConditionsLoading] = useState(true);
+    const [savingConditions, setSavingConditions] = useState(false);
 
     useEffect(() => {
         if (session?.user) {
@@ -20,6 +25,24 @@ export default function SettingsPage() {
             setEmail(session.user.email || "");
         }
     }, [session]);
+
+    // Fetch user's conditions
+    useEffect(() => {
+        async function fetchConditions() {
+            if (!session?.user?.id) return;
+
+            try {
+                const conditions = await getConditions(session.user.id);
+                setUserConditions(conditions.map(c => c.condition));
+            } catch (err) {
+                console.error("Failed to fetch conditions:", err);
+            } finally {
+                setConditionsLoading(false);
+            }
+        }
+
+        fetchConditions();
+    }, [session?.user?.id]);
 
     // Handle saving the name change
     async function handleSave() {
@@ -62,6 +85,31 @@ export default function SettingsPage() {
             }
         });
     };
+
+    // Toggle a condition
+    function toggleCondition(condition: string) {
+        setUserConditions(prev =>
+            prev.includes(condition)
+                ? prev.filter(c => c !== condition)
+                : [...prev, condition]
+        );
+    }
+
+    // Save conditions
+    async function handleSaveConditions() {
+        if (!session?.user?.id) return;
+
+        setSavingConditions(true);
+        try {
+            await createConditions(session.user.id, userConditions);
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (err) {
+            console.error("Failed to save conditions:", err);
+        } finally {
+            setSavingConditions(false);
+        }
+    }
 
     return (
         <div className="max-w-2xl mx-auto animate-fade-in">
@@ -108,6 +156,46 @@ export default function SettingsPage() {
                         </span>
                     )}
                 </div>
+            </div>
+
+            {/* Health Conditions Section */}
+            <div className="bg-white rounded-2xl border border-neutral-200/50 shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-semibold text-neutral-800 mb-2">Health Conditions</h2>
+                <p className="text-sm text-neutral-500 mb-4">Select conditions you want to track. Already selected conditions are highlighted in blue.</p>
+
+                {conditionsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                        <svg className="w-5 h-5 animate-spin text-primary-500" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
+                            <path d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="currentColor" className="opacity-75" />
+                        </svg>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {COMMON_CONDITIONS.map((condition: string) => (
+                                <button
+                                    key={condition}
+                                    type="button"
+                                    onClick={() => toggleCondition(condition)}
+                                    className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${userConditions.includes(condition)
+                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/20"
+                                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 border border-neutral-200/50"
+                                        }`}
+                                >
+                                    {condition}
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={handleSaveConditions}
+                            disabled={savingConditions}
+                            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold shadow-md hover:shadow-lg disabled:opacity-50 transition-all"
+                        >
+                            {savingConditions ? "Saving..." : "Save Conditions"}
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* Security Section */}

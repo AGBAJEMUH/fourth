@@ -180,6 +180,16 @@ export async function createConditions(userId: string, conditionNames: string[])
     );
 }
 
+export async function getConditions(userId: string): Promise<{ condition: string }[]> {
+    if (USE_MOCK) return mockDb.getConditions(userId).map(c => ({ condition: c.condition }));
+
+    const rows = await db.select({ condition: userConditions.condition })
+        .from(userConditions)
+        .where(eq(userConditions.userId, userId));
+
+    return rows;
+}
+
 // ---- Journal Operations ----
 export async function createEntry(data: Omit<DbEntry, "id" | "createdAt" | "updatedAt">): Promise<DbEntry> {
     if (USE_MOCK) return mockDb.createEntry(data);

@@ -229,8 +229,8 @@ export default function JournalPage() {
                 />
             </div>
             {existingEntryId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full text-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 pointer-events-none">
+                    <div className="bg-white rounded-2xl shadow-xl p-6 max-w-md w-full text-center pointer-events-auto">
                         <h2 className="text-lg font-bold text-neutral-900 mb-2">
                             Entry Already Exists
                         </h2>
